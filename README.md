@@ -1,75 +1,62 @@
-# Testovací sada Barrel & Measurement API
+# Testovaci sada Barrel a Measurement API
 
-Automatizovaná sada testů rozdělená do tří vrstev markerů: `behavior`, `contract`, `robustness`.
+## Requirements
 
-## Závislosti
+Python verze 3.11 nebo novejsi
 
-Požadováno: Python >= 3.11
-
-Instalace:
-```bash
+### Instalace zavislosti
+```
 pip install -r requirements.txt
 ```
+Pouzite knihovny: `pytest requests python dotenv jsonschema hypothesis`
 
-Použité knihovny: `pytest`, `requests`, `python-dotenv`, `jsonschema`, `hypothesis`.
+## Promenne prostredi
 
-## Proměnné prostředí
+- BASE_URL adresa API vychozi je https://to-barrel-monitor.azurewebsites.net
+- OPENAPI_URL url vzdalenou specifikaci pouzivaji testy a snapshot
+- STRICT hodnota 1 true yes on zapne tvrde selhani pri driftu a extra polich jinak se nektere odchylky oznaci jako xfail
+- SHOW_HTTP hodnota 1 zapne vypis http volani
+- RETRY ignorovano aktualne neni implementace
+- RETRY_BACKOFF ignorovano neni v kodu
 
-| Proměnná | Význam |
-|----------|--------|
-| BASE_URL | Základní URL API (např. https://api.example.com) |
-| STRICT | 1 = tvrdé pády na drift (aktuálně není soft režim) |
-| SHOW_HTTP | 1 = logování odpovědí (pokud je implementováno v klientovi) |
-| RETRY | (rezervováno / momentálně neaktivní) |
-| RETRY_BACKOFF | Základní backoff sekundy (rezervováno) |
+## Markery testu
 
-## Struktura vrstev
-
-- behavior: Základní pozitivní scénáře (flow vytvoření + čtení) 
-- contract: Validace schémat, povinných/extra polí, tvaru seznamů dle OpenAPI
-- robustness: Negativní / edge vstupy (neexistující ID, prázdné hodnoty)
-
-## Hlavní soubory
-
-| Soubor | Popis |
-|--------|-------|
-| `src/client.py` | Lehký HTTP klient + pomocné funkce |
-| `tests/conftest.py` | Fixturny, snapshot hash OpenAPI, healthcheck |
-| `tests/test_smoke.py` | Ručně psané behavior/contract/robustness testy |
-| `tests/test_contract_auto.py` | Autogenerované list kontrakty z OpenAPI |
-| `openapi.json` | OpenAPI specifikace |
-| `openapi.snapshot` | Uložený hash specifikace pro detekci driftu |
+- **behavior:** pozitivni tok vytvoreni precteni smazani
+- **contract:** kontrola tvaru seznamu podle OpenAPI a klice detailu Measurement plus detekce driftu specifikace
+- **robustness:** negativni scenare chybna data neexistujici identifikatory prazdne retezce
 
 ## OpenAPI snapshot
 
-První běh uloží hash do `tests/openapi.snapshot`. Změna specifikace → nový hash → při STRICT=1 test fail (zachytí neohlášený drift). 
+Prvni beh vypocte hash a ulozi do tests/openapi.snapshot dalsi behy porovnaji hash se vzdalenym JSON pri zmene a STRICT aktivni test selze jinak xfail drift
 
-## Autogenerované kontraktní testy
+## Generovane testy
 
-`test_contract_auto.py` prochází všechny GET list endpointy (bez `{id}`) a validuje první položku seznamu vůči definovanému schématu komponenty. Pokud je seznam prázdný, test se jednou pokusí seednout ukázková data a zkusí znovu.
+Test seznamu najde GET endpointy bez parametru kdyz vrati prazdny seznam jednou osadi minimalni data a zkusi znovu validuje prvni polozku proti schematu
+Negativni testy vytvori validni barrely a mereni pak generuji mutace odebrani povinneho pole nebo nastaveni prazdneho a whitespace retezce
+Hypothesis generuje prazdne a whitespace hodnoty pro qr
 
-## Property-based fuzz
+## Omezeni a todo
 
-Hypothesis generuje prázdné a whitespace varianty `qr` pro ověření odmítnutí nevalidních hodnot bez duplikace parametrizovaných případů.
+- Detail Barrel neni kontrolovan proti schematu jen id
+- Detail Measurement validace klicu je rucni a zavisla na konstantach
+- Measurements se nemaze data mohou rust
+- Specifikace se stahuje pri importu dvou test souboru coz prodluzuje start
+- Retry promenne nejsou implementovane
 
-## Spuštění
-
-Rychlý běh všeho:
-```bash
+## Spusteni
+```
 pytest -q
 ```
-Filtrování podle markeru:
-```bash
-pytest -m behavior -q
+### Filtrovani markeru priklad jen contract
+```
 pytest -m contract -q
-pytest -m robustness -q
 ```
 
-## Známé problémy backendu (aktuálně odhalené)
+## Zname problemy backendu pozorovano
 
-1. GET /barrels/{uuid} vrací 500 místo 404/400 pro neexistující ID.
-2. DELETE /barrels/{id} někdy končí 500 (i během cleanup ve fixture).
-3. Vytváření barrel akceptuje extra / chybějící pole (nedostatečná validace additionalProperties / required).
-4. Prázdné nebo whitespace `qr` je přijato (mělo by být 4xx).
-5. Možný drift u /measurements (tvar odpovědi neodpovídá očekávanému `Measurement`).
+- GET /barrels/{id} muze vratit 500 pro neexistujici id ocekavane je 404 nebo 400
+- DELETE /barrels/{id} muze vratit 500 klient oznaci jako xfail kdyz STRICT vypnut
+- Server prijima extra pole nebo prazdne retezce u Barrel a nekdy u Measurement
+- Prazdne nebo whitespace qr muze byt prijato
+- Obcas 500 pri detail odpovedi measurement nebo barrel pri STRICT vypnut prevede se na xfail
 
