@@ -1,0 +1,58 @@
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+*.dylib
+
+# Virtual environments
+.venv/
+venv/
+.env/  # directory form if created
+
+# Environment files (keep example)
+.env
+!.env.example
+
+# pytest / hypothesis
+.pytest_cache/
+.hypothesis/
+
+# Coverage / test artifacts
+.coverage*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs / temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+
+# macOS
+.DS_Store
+
+# Reports (keep Markdown performance report if needed)
+# Uncomment next line to ignore generated reports except committed examples
+# reports/*
+# !reports/*.md
+
+# Node leftovers (if any tooling pulls them in)
+node_modules/
